@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "http://localhost:3001/api",
+  baseURL: "https://fleet-backend-999392819034.europe-west1.run.app/api",
 });
 
 export interface Vehicle {
