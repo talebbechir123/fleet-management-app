@@ -30,14 +30,15 @@ router.post("/", validateBody(scheduleSchema), async (req, res, next) => {
 
 router.get("/vehicle/:vehicleId", async (req, res, next) => {
   try {
-    const events = await maintenanceService.listForVehicle(req.params.vehicleId);
+    const vehicleId = req.params.vehicleId;
+    const events = await maintenanceService.listForVehicle(vehicleId);
     res.json(events);
   } catch (err) { next(err); }
 });
 
 router.patch("/:id/complete", validateBody(completeSchema), async (req, res, next) => {
   try {
-    const event = await maintenanceService.complete(req.params.id, req.body.costEur);
+    const event = await maintenanceService.complete(String(req.params.id), req.body.costEur);
     res.json(event);
   } catch (err) { next(err); }
 });

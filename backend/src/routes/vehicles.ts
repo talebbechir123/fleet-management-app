@@ -26,12 +26,11 @@ router.post("/", validateBody(createSchema), async (req, res, next) => {
 
 router.get("/", async (req, res, next) => {
   try {
-    const result = await vehicleService.list({
-      status: req.query.status as "active" | "maintenance" | "retired" | undefined,
-      isElectric: req.query.isElectric === "true" ? true : req.query.isElectric === "false" ? false : undefined,
-      page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
-    });
+    const status = typeof req.query.status === "string" ? req.query.status as "active" | "maintenance" | "retired" : undefined;
+    const isElectric = req.query.isElectric === "true" ? true : req.query.isElectric === "false" ? false : undefined;
+    const page = typeof req.query.page === "string" ? parseInt(req.query.page, 10) : undefined;
+    const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : undefined;
+    const result = await vehicleService.list({ status, isElectric, page, limit });
     res.json(result);
   } catch (err) { next(err); }
 });
@@ -39,14 +38,14 @@ router.get("/", async (req, res, next) => {
 router.get("/:id", async (req, res, next) => {
   try {
     const v = await vehicleService.findById(req.params.id);
-    if (!v) return res.status(404).json({ error: "Not found" });
+    if (!v) { res.status(404).json({ error: "Not found" }); return; }
     res.json(v);
   } catch (err) { next(err); }
 });
 
 router.patch("/:id/status", validateBody(updateStatusSchema), async (req, res, next) => {
   try {
-    const updated = await vehicleService.updateStatus(req.params.id, req.body.status);
+    const updated = await vehicleService.updateStatus(String(req.params.id), req.body.status);
     res.json(updated);
   } catch (err) { next(err); }
 });

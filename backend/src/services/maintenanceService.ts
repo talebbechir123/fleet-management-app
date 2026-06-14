@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 import { MaintenanceEvent, IMaintenanceEvent, IMaintenanceEventDocument } from "../models/MaintenanceEvent.js";
-import { Vehicle } from "../models/Vehicle.js";
+import { Vehicle } from "../models/vehicle.js";
 import { HttpError } from "../middleware/errorHandler.js";
 
 export const maintenanceService = {
@@ -12,7 +12,6 @@ export const maintenanceService = {
     const vehicle = await Vehicle.findById(input.vehicleId);
     if (!vehicle) throw new HttpError(404, "Vehicle not found");
 
-    // Two ranges [a,b] and [c,d] overlap when a < d AND b > c
     const conflict = await MaintenanceEvent.findOne({
       vehicleId: input.vehicleId,
       scheduledStart: { $lt: input.scheduledEnd },
