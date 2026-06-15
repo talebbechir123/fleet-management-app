@@ -1,111 +1,156 @@
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { vehicleApi } from "../lib/api";
+
+const CV_URL = "https://github.com/talebbechir123/fleet-management-app/public/Bechir_Devops_FullStack_eng.pdf";
+const PHOTO_URL = "/fleet-management-app/profile.jpg";
 
 export function Home() {
+  const { data } = useQuery({
+    queryKey: ["vehicles"],
+    queryFn: () => vehicleApi.list(),
+  });
+
+  const total = data?.total ?? 0;
+  const active = data?.items.filter((v) => v.status === "active").length ?? 0;
+  const maintenance = data?.items.filter((v) => v.status === "maintenance").length ?? 0;
+  const electric = data?.items.filter((v) => v.isElectric).length ?? 0;
+
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: 48, fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ textAlign: "center", marginBottom: 48 }}>
-        <h1 style={{ fontSize: 40, marginBottom: 8, letterSpacing: -1 }}>Fleet Management OS</h1>
-        <p style={{ color: "#6b7280", fontSize: 18, maxWidth: 600, margin: "0 auto", lineHeight: 1.6 }}>
-          A full stack fleet management platform built as a portfolio project to demonstrate
-          end-to-end software engineering: from typed APIs and database design
-          to containerized deployment and Kubernetes orchestration.
-        </p>
-      </div>
-
-      <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", marginBottom: 48 }}>
-        <Link to="/vehicles" style={{ textDecoration: "none" }}>
-          <div style={{
-            padding: "24px 32px", border: "2px solid #3b82f6",
-            borderRadius: 12, cursor: "pointer", minWidth: 200, textAlign: "center",
-          }}>
-            <h2 style={{ margin: 0, color: "#3b82f6" }}>Vehicles</h2>
-            <p style={{ color: "#6b7280", margin: "8px 0 0" }}>View and manage all vehicles</p>
-          </div>
-        </Link>
-        <Link to="/add" style={{ textDecoration: "none" }}>
-          <div style={{
-            padding: "24px 32px", border: "2px solid #22c55e",
-            borderRadius: 12, cursor: "pointer", minWidth: 200, textAlign: "center",
-          }}>
-            <h2 style={{ margin: 0, color: "#22c55e" }}>Add Vehicle</h2>
-            <p style={{ color: "#6b7280", margin: "8px 0 0" }}>Register a new vehicle</p>
-          </div>
-        </Link>
-      </div>
-
-      <div style={{ background: "#f9fafb", borderRadius: 12, padding: 32, marginBottom: 32 }}>
-        <h2 style={{ fontSize: 22, marginTop: 0, marginBottom: 16 }}>What this project demonstrates</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          <div>
-            <h3 style={{ fontSize: 15, color: "#3b82f6", marginBottom: 6 }}>Backend Engineering</h3>
-            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0 }}>
-              RESTful API built with Node.js, Express, and TypeScript. Service layer architecture
-              with domain logic (state machine transitions, time range conflict detection),
-              Zod schema validation on every input, and centralized error handling.
-            </p>
-          </div>
-          <div>
-            <h3 style={{ fontSize: 15, color: "#22c55e", marginBottom: 6 }}>Frontend Engineering</h3>
-            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0 }}>
-              React with TypeScript, React Router for navigation, and React Query for
-              server state management with automatic cache invalidation. Typed API client
-              with Axios. Controlled forms and optimistic UI patterns.
-            </p>
-          </div>
-          <div>
-            <h3 style={{ fontSize: 15, color: "#f59e0b", marginBottom: 6 }}>Database Design</h3>
-            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0 }}>
-              MongoDB with Mongoose ODM. Compound indexes for query performance,
-              typed document interfaces, and an interval overlap query for maintenance
-              conflict detection: two ranges [a,b] and [c,d] overlap when a &lt; d AND b &gt; c.
-            </p>
-          </div>
-          <div>
-            <h3 style={{ fontSize: 15, color: "#8b5cf6", marginBottom: 6 }}>DevOps and Infrastructure</h3>
-            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0 }}>
-              Dockerized backend, Kubernetes manifests with separate liveness and readiness
-              probes (readiness checks the database connection state before accepting traffic),
-              resource limits, and secrets management. Deployed on Google Cloud Run.
-            </p>
+    <div className="container">
+      {/* ─── Hero: personal intro ─── */}
+      <section className="hero">
+        <img
+          src={PHOTO_URL}
+          alt="Ahmed Taleb Bechir"
+          className="hero-photo"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src =
+              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Crect width='160' height='160' fill='%23e4e4e7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='%2371717a' font-size='48' font-family='system-ui'%3EATB%3C/text%3E%3C/svg%3E";
+          }}
+        />
+        <div className="hero-text">
+          <h1 className="hero-name">Ahmed Taleb Bechir</h1>
+          <p className="hero-role">Software Engineer · ENS Paris-Saclay</p>
+          <p className="hero-bio">
+            Systems engineer with experience in high-performance computing and
+            network programming at Eviden. Building full stack products with
+            TypeScript, Node.js, React, and MongoDB. Looking for early-stage
+            product teams where engineering decisions shape the product.
+          </p>
+          <div className="hero-actions">
+            <a href="mailto:talebbechir123@gmail.com">
+              <button className="btn btn-primary btn-lg">Get in touch</button>
+            </a>
+            <a href={CV_URL} target="_blank" rel="noopener noreferrer">
+              <button className="btn btn-secondary btn-lg">Download CV</button>
+            </a>
+            <a href="https://github.com/talebbechir123" target="_blank" rel="noopener noreferrer">
+              <button className="btn btn-secondary btn-lg">GitHub</button>
+            </a>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div style={{ background: "#f9fafb", borderRadius: 12, padding: 32, marginBottom: 32 }}>
-        <h2 style={{ fontSize: 22, marginTop: 0, marginBottom: 16 }}>Tech stack</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {/* ─── Live demo: fleet stats from the API ─── */}
+      <section className="section">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
+          <h2 className="section-title" style={{ marginBottom: 0 }}>Live fleet dashboard</h2>
+          <Link to="/vehicles" style={{ fontSize: 14 }}>
+            Open full dashboard →
+          </Link>
+        </div>
+        <p style={{ color: "var(--text-secondary)", fontSize: 14, marginBottom: 16 }}>
+          These numbers are pulled live from a Node.js API on Google Cloud Run,
+          connected to MongoDB Atlas. Not mocked data.
+        </p>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-value">{total}</div>
+            <div className="stat-label">Vehicles registered</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: "var(--green)" }}>{active}</div>
+            <div className="stat-label">Active</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: "var(--amber)" }}>{maintenance}</div>
+            <div className="stat-label">In maintenance</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: "var(--accent)" }}>{electric}</div>
+            <div className="stat-label">Electric</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Project showcase ─── */}
+      <section className="section">
+        <h2 className="section-title">What this project demonstrates</h2>
+        <div className="showcase-grid">
+          <div className="showcase-card">
+            <div className="showcase-label" style={{ color: "var(--accent)" }}>Backend</div>
+            <div className="showcase-title">Typed API with domain logic</div>
+            <div className="showcase-desc">
+              Node.js + Express + TypeScript. Service layer with state machine
+              transitions and interval overlap queries for conflict detection.
+              Zod validation on every input. Centralized error handling.
+            </div>
+          </div>
+          <div className="showcase-card">
+            <div className="showcase-label" style={{ color: "var(--green)" }}>Frontend</div>
+            <div className="showcase-title">React with server state management</div>
+            <div className="showcase-desc">
+              React + TypeScript + React Query. Automatic cache invalidation
+              on mutations. Typed API client with Axios. Client-side filtering
+              and controlled forms.
+            </div>
+          </div>
+          <div className="showcase-card">
+            <div className="showcase-label" style={{ color: "var(--amber)" }}>Database</div>
+            <div className="showcase-title">MongoDB with compound indexes</div>
+            <div className="showcase-desc">
+              Mongoose ODM with typed document interfaces. Compound indexes on
+              (status, isElectric) and (vehicleId, scheduledStart, scheduledEnd).
+              Overlap detection: a &lt; d AND b &gt; c.
+            </div>
+          </div>
+          <div className="showcase-card">
+            <div className="showcase-label" style={{ color: "var(--red)" }}>Infrastructure</div>
+            <div className="showcase-title">Docker, K8S, Cloud Run, CI/CD</div>
+            <div className="showcase-desc">
+              Multi-stage Docker build. K8S manifests with liveness and readiness
+              probes. Backend on Google Cloud Run. Frontend on GitHub Pages via
+              GitHub Actions.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Tech stack ─── */}
+      <section className="section">
+        <h2 className="section-title">Tech stack</h2>
+        <div className="tags">
           {[
             "TypeScript", "Node.js", "Express", "React", "React Query",
             "MongoDB", "Mongoose", "Zod", "Docker", "Kubernetes",
             "Google Cloud Run", "GitHub Actions", "Vite",
-          ].map((tech) => (
-            <span
-              key={tech}
-              style={{
-                padding: "4px 14px", borderRadius: 16, fontSize: 13,
-                background: "white", border: "1px solid #d1d5db", color: "#374151",
-              }}
-            >
-              {tech}
-            </span>
+          ].map((t) => (
+            <span key={t} className="tag">{t}</span>
           ))}
         </div>
-      </div>
+      </section>
 
-      <div style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, marginTop: 32 }}>
+      {/* ─── Footer ─── */}
+      <footer className="footer">
         <p>
-          Built by Ahmed Taleb Bechir.
-          {" "}
-          <a
-            href="https://github.com/talebbechir123/fleet-management-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#6b7280" }}
-          >
-            View source on GitHub
+          Ahmed Taleb Bechir · {" "}
+          <a href="mailto:talebbechir123@gmail.com">talebbechir123@gmail.com</a> · {" "}
+          <a href="https://github.com/talebbechir123/fleet-management-app" target="_blank" rel="noopener noreferrer">
+            Source on GitHub
           </a>
         </p>
-      </div>
+      </footer>
     </div>
   );
 }

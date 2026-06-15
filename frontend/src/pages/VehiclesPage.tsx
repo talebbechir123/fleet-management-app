@@ -5,167 +5,106 @@ import { vehicleApi } from "../lib/api";
 import type { Vehicle } from "../lib/api";
 import { MaintenancePanel } from "../components/MaintenancePanel";
 
-const STATUS_COLORS: Record<Vehicle["status"], string> = {
-  active: "#22c55e",
-  maintenance: "#f59e0b",
-  retired: "#6b7280",
-};
+type Filter = "all" | "active" | "maintenance" | "retired";
+const BADGE: Record<Vehicle["status"], string> = { active: "badge badge-active", maintenance: "badge badge-maintenance", retired: "badge badge-retired" };
 
 export function VehiclesPage() {
-  const queryClient = useQueryClient();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "active" | "maintenance" | "retired">("all");
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["vehicles"],
-    queryFn: () => vehicleApi.list(),
-  });
+  const { data, isLoading, error } = useQuery({ queryKey: ["vehicles"], queryFn: () => vehicleApi.list() });
 
   const updateStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Vehicle["status"] }) =>
-      vehicleApi.updateStatus(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vehicles"] }),
+    mutationFn: ({ id, status }: { id: string; status: Vehicle["status"] }) => vehicleApi.updateStatus(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vehicles"] }),
   });
 
-  const deleteVehicle = useMutation({
+  const del = useMutation({
     mutationFn: (id: string) => vehicleApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-      if (selectedId) setSelectedId(null);
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["vehicles"] }); setSelected(null); },
   });
 
-  const filtered = data?.items.filter(
-    (v) => filter === "all" || v.status === filter
-  );
+  const items = data?.items ?? [];
+  const filtered = items.filter((v) => filter === "all" || v.status === filter);
+  const counts = { active: items.filter((v) => v.status === "active").length, maintenance: items.filter((v) => v.status === "maintenance").length, retired: items.filter((v) => v.status === "retired").length };
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+    <div className="container">
+      <div className="page-header">
         <div>
-          <Link to="/" style={{ color: "#3b82f6", textDecoration: "none", fontSize: 14 }}>Home</Link>
-          <h1 style={{ margin: "8px 0 0" }}>Vehicles</h1>
+          <h1 className="page-title">Fleet vehicles</h1>
+          <p className="page-subtitle">{data ? `${data.total} registered` : "Loading..."}</p>
         </div>
-        <Link to="/add">
-          <button style={{
-            padding: "8px 20px", borderRadius: 8, background: "#3b82f6",
-            color: "white", border: "none", cursor: "pointer", fontSize: 14
-          }}>
-            + Add vehicle
-          </button>
-        </Link>
+        <Link to="/add"><button className="btn btn-primary">+ Add vehicle</button></Link>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div className="stats-grid" style={{ marginBottom: 20 }}>
+        <div className="stat-card"><div className="stat-value">{items.length}</div><div className="stat-label">Total</div></div>
+        <div className="stat-card"><div className="stat-value" style={{ color: "var(--green)" }}>{counts.active}</div><div className="stat-label">Active</div></div>
+        <div className="stat-card"><div className="stat-value" style={{ color: "var(--amber)" }}>{counts.maintenance}</div><div className="stat-label">Maintenance</div></div>
+        <div className="stat-card"><div className="stat-value" style={{ color: "var(--gray)" }}>{counts.retired}</div><div className="stat-label">Retired</div></div>
+      </div>
+
+      <div className="filters" style={{ marginBottom: 16 }}>
         {(["all", "active", "maintenance", "retired"] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            style={{
-              padding: "4px 14px", borderRadius: 16, fontSize: 13, cursor: "pointer",
-              border: filter === s ? "2px solid #3b82f6" : "1px solid #d1d5db",
-              background: filter === s ? "#eff6ff" : "white",
-              color: filter === s ? "#3b82f6" : "#374151",
-            }}
-          >
+          <button key={s} className={`pill ${filter === s ? "active" : ""}`} onClick={() => setFilter(s)}>
             {s.charAt(0).toUpperCase() + s.slice(1)}
+            {s !== "all" && <span style={{ marginLeft: 4, opacity: 0.6 }}>({counts[s]})</span>}
           </button>
         ))}
-        {data && (
-          <span style={{ marginLeft: "auto", fontSize: 13, color: "#6b7280", alignSelf: "center" }}>
-            {data.total} vehicles total
-          </span>
-        )}
       </div>
 
-      {isLoading && <p>Loading...</p>}
+      {error && <div className="alert-error" style={{ marginBottom: 16 }}>Failed to load vehicles.</div>}
+      {isLoading && <p style={{ color: "var(--text-muted)", padding: "24px 0" }}>Loading...</p>}
 
-      {!isLoading && !filtered?.length && (
-        <p style={{ color: "#6b7280" }}>No vehicles found. <Link to="/add">Add one.</Link></p>
+      {!isLoading && filtered.length === 0 && (
+        <div className="empty">
+          <p>{filter === "all" ? "No vehicles yet." : `No ${filter} vehicles.`}</p>
+          {filter === "all" && <Link to="/add"><button className="btn btn-primary" style={{ marginTop: 8 }}>Add your first vehicle</button></Link>}
+        </div>
       )}
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        {filtered && filtered.length > 0 && (
-          <>
-            <thead>
-              <tr style={{ borderBottom: "2px solid #e5e7eb", textAlign: "left" }}>
-                <th style={{ padding: "8px 12px", fontSize: 13, color: "#6b7280" }}>Plate</th>
-                <th style={{ padding: "8px 12px", fontSize: 13, color: "#6b7280" }}>Status</th>
-                <th style={{ padding: "8px 12px", fontSize: 13, color: "#6b7280" }}>Mileage</th>
-                <th style={{ padding: "8px 12px", fontSize: 13, color: "#6b7280" }}>Type</th>
-                <th style={{ padding: "8px 12px", fontSize: 13, color: "#6b7280" }}>Acquired</th>
-                <th style={{ padding: "8px 12px", fontSize: 13, color: "#6b7280" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((v) => (
-                <tr
-                  key={v._id}
-                  onClick={() => setSelectedId(selectedId === v._id ? null : v._id)}
-                  style={{
-                    borderBottom: "1px solid #f3f4f6",
-                    cursor: "pointer",
-                    background: selectedId === v._id ? "#eff6ff" : "transparent",
-                  }}
-                >
-                  <td style={{ padding: "10px 12px", fontWeight: 600 }}>{v.plate}</td>
-                  <td style={{ padding: "10px 12px" }}>
-                    <span style={{
-                      padding: "2px 10px", borderRadius: 12, fontSize: 12,
-                      background: STATUS_COLORS[v.status], color: "white"
-                    }}>
-                      {v.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: "10px 12px" }}>{v.mileage.toLocaleString()} km</td>
-                  <td style={{ padding: "10px 12px" }}>{v.isElectric ? "⚡ Electric" : "⛽ Thermal"}</td>
-                  <td style={{ padding: "10px 12px", fontSize: 13, color: "#6b7280" }}>
-                    {new Date(v.acquiredAt).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: "10px 12px" }}>
-                    <div style={{ display: "flex", gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                      {v.status === "active" && (
-                        <button
-                          onClick={() => updateStatus.mutate({ id: v._id, status: "maintenance" })}
-                          style={{ fontSize: 11, padding: "3px 8px", cursor: "pointer", borderRadius: 4, border: "1px solid #f59e0b", background: "white", color: "#f59e0b" }}
-                        >
-                          Maintenance
-                        </button>
-                      )}
-                      {v.status === "maintenance" && (
-                        <button
-                          onClick={() => updateStatus.mutate({ id: v._id, status: "active" })}
-                          style={{ fontSize: 11, padding: "3px 8px", cursor: "pointer", borderRadius: 4, border: "1px solid #22c55e", background: "white", color: "#22c55e" }}
-                        >
-                          Activate
-                        </button>
-                      )}
-                      {v.status !== "retired" && (
-                        <button
-                          onClick={() => updateStatus.mutate({ id: v._id, status: "retired" })}
-                          style={{ fontSize: 11, padding: "3px 8px", cursor: "pointer", borderRadius: 4, border: "1px solid #6b7280", background: "white", color: "#6b7280" }}
-                        >
-                          Retire
-                        </button>
-                      )}
-                      <button
-                        onClick={() => { if (confirm(`Delete ${v.plate}?`)) deleteVehicle.mutate(v._id); }}
-                        style={{ fontSize: 11, padding: "3px 8px", cursor: "pointer", borderRadius: 4, border: "1px solid #ef4444", background: "white", color: "#ef4444" }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+      {filtered.length > 0 && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Plate</th><th>Status</th><th>Mileage</th><th>Type</th><th>Acquired</th><th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </>
-        )}
-      </table>
+              </thead>
+              <tbody>
+                {filtered.map((v) => (
+                  <tr key={v._id} className={selected === v._id ? "selected" : ""} onClick={() => setSelected(selected === v._id ? null : v._id)}>
+                    <td style={{ fontWeight: 600 }}>{v.plate}</td>
+                    <td><span className={BADGE[v.status]}>{v.status}</span></td>
+                    <td>{v.mileage.toLocaleString()} km</td>
+                    <td>{v.isElectric ? "\u26A1 Electric" : "\u26FD Thermal"}</td>
+                    <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{new Date(v.acquiredAt).toLocaleDateString()}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                        {v.status === "active" && <button className="btn btn-sm btn-secondary" onClick={() => updateStatus.mutate({ id: v._id, status: "maintenance" })} disabled={updateStatus.isPending}>Maintenance</button>}
+                        {v.status === "maintenance" && <button className="btn btn-sm btn-secondary" onClick={() => updateStatus.mutate({ id: v._id, status: "active" })} disabled={updateStatus.isPending}>Activate</button>}
+                        {v.status !== "retired" && <button className="btn btn-sm btn-secondary" onClick={() => updateStatus.mutate({ id: v._id, status: "retired" })} disabled={updateStatus.isPending}>Retire</button>}
+                        <button className="btn btn-sm btn-danger" onClick={() => { if (confirm(`Delete ${v.plate}?`)) del.mutate(v._id); }} disabled={del.isPending}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-      {selectedId && (
-        <div style={{ marginTop: 24, padding: 16, border: "1px solid #e5e7eb", borderRadius: 8 }}>
-          <MaintenancePanel vehicleId={selectedId} />
+      {selected && (
+        <div className="card card-body" style={{ marginBottom: 32 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 700 }}>Maintenance: {items.find((v) => v._id === selected)?.plate}</h2>
+            <button className="btn btn-sm btn-secondary" onClick={() => setSelected(null)}>Close</button>
+          </div>
+          <MaintenancePanel vehicleId={selected} />
         </div>
       )}
     </div>

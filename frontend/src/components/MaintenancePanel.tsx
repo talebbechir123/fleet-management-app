@@ -1,14 +1,18 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { maintenanceApi } from "../lib/api";
 import type { MaintenanceEvent } from "../lib/api";
 
-interface Props {
-  vehicleId: string;
-}
+interface Props { vehicleId: string; }
+
+const TYPE_LABELS: Record<MaintenanceEvent["type"], string> = {
+  oil_change: "Oil change", tire: "Tire service",
+  inspection: "Inspection", battery: "Battery", other: "Other",
+};
 
 export function MaintenancePanel({ vehicleId }: Props) {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const [type, setType] = useState<MaintenanceEvent["type"]>("oil_change");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -21,104 +25,51 @@ export function MaintenancePanel({ vehicleId }: Props) {
 
   const schedule = useMutation({
     mutationFn: maintenanceApi.schedule,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["maintenance", vehicleId] });
-      setStart("");
-      setEnd("");
-      setNotes("");
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["maintenance", vehicleId] }); setStart(""); setEnd(""); setNotes(""); },
   });
 
   const complete = useMutation({
-    mutationFn: ({ id, costEur }: { id: string; costEur: number }) =>
-      maintenanceApi.complete(id, costEur),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maintenance", vehicleId] }),
+    mutationFn: ({ id, costEur }: { id: string; costEur: number }) => maintenanceApi.complete(id, costEur),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["maintenance", vehicleId] }),
   });
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    schedule.mutate({
-      vehicleId,
-      type,
-      scheduledStart: new Date(start).toISOString(),
-      scheduledEnd: new Date(end).toISOString(),
-      notes: notes || undefined,
-    });
+    schedule.mutate({ vehicleId, type, scheduledStart: new Date(start).toISOString(), scheduledEnd: new Date(end).toISOString(), notes: notes || undefined });
   }
 
   return (
-    <div style={{ marginTop: 24 }}>
-      <h3 style={{ marginBottom: 12 }}>Schedule maintenance</h3>
+    <div>
+      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Schedule maintenance</h3>
       <form onSubmit={handleSubmit} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as MaintenanceEvent["type"])}
-          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db" }}
-        >
-          <option value="oil_change">Oil change</option>
-          <option value="tire">Tire</option>
-          <option value="inspection">Inspection</option>
-          <option value="battery">Battery</option>
-          <option value="other">Other</option>
+        <select value={type} onChange={(e) => setType(e.target.value as MaintenanceEvent["type"])} className="form-input" style={{ width: "auto" }}>
+          {Object.entries(TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <input
-          type="datetime-local"
-          value={start}
-          onChange={(e) => setStart(e.target.value)}
-          required
-          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db" }}
-        />
-        <input
-          type="datetime-local"
-          value={end}
-          onChange={(e) => setEnd(e.target.value)}
-          required
-          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db" }}
-        />
-        <input
-          placeholder="Notes (optional)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", flex: 1 }}
-        />
-        <button
-          type="submit"
-          disabled={schedule.isPending}
-          style={{ padding: "6px 16px", borderRadius: 6, background: "#f59e0b", color: "white", border: "none", cursor: "pointer" }}
-        >
+        <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} required className="form-input" style={{ width: "auto", flex: 1, minWidth: 170 }} />
+        <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} required className="form-input" style={{ width: "auto", flex: 1, minWidth: 170 }} />
+        <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="form-input" style={{ flex: 2, minWidth: 140 }} />
+        <button type="submit" disabled={schedule.isPending} className="btn btn-primary btn-sm">
           {schedule.isPending ? "Scheduling..." : "Schedule"}
         </button>
-        {schedule.isError && (
-          <p style={{ color: "red", width: "100%", margin: 0 }}>
-            {(schedule.error as any)?.response?.data?.error ?? "Failed to schedule"}
-          </p>
-        )}
       </form>
+      {schedule.isError && <div className="alert-error" style={{ marginBottom: 12 }}>{(schedule.error as any)?.response?.data?.error ?? "Failed to schedule"}</div>}
 
-      <h3>Events</h3>
-      {isLoading && <p>Loading...</p>}
+      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>History</h3>
+      {isLoading && <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Loading...</p>}
+      {!isLoading && (!events || events.length === 0) && <p style={{ color: "var(--text-muted)", fontSize: 14 }}>No events yet.</p>}
       {events?.map((ev) => (
-        <div
-          key={ev._id}
-          style={{ padding: 10, marginBottom: 8, border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13 }}
-        >
-          <strong>{ev.type.replace("_", " ")}</strong>
-          <span style={{ marginLeft: 8, color: "#6b7280" }}>
-            {new Date(ev.scheduledStart).toLocaleDateString()} to {new Date(ev.scheduledEnd).toLocaleDateString()}
-          </span>
-          {ev.completedAt ? (
-            <span style={{ marginLeft: 8, color: "#22c55e" }}>
-              Completed — {ev.costEur != null ? `${ev.costEur}€` : ""}
+        <div key={ev._id} className="card" style={{ padding: "10px 16px", marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>{TYPE_LABELS[ev.type]}</span>
+            <span style={{ marginLeft: 10, fontSize: 13, color: "var(--text-muted)" }}>
+              {new Date(ev.scheduledStart).toLocaleDateString()} – {new Date(ev.scheduledEnd).toLocaleDateString()}
             </span>
+          </div>
+          {ev.completedAt ? (
+            <span className="badge badge-active">Done{ev.costEur != null ? ` · ${ev.costEur}€` : ""}</span>
           ) : (
-            <button
-              onClick={() => {
-                const cost = parseFloat(prompt("Cost in EUR?") ?? "0");
-                if (!isNaN(cost)) complete.mutate({ id: ev._id, costEur: cost });
-              }}
-              style={{ marginLeft: 8, fontSize: 12, padding: "2px 8px", cursor: "pointer" }}
-            >
-              Mark complete
+            <button className="btn btn-sm btn-secondary" onClick={() => { const c = parseFloat(prompt("Cost in EUR?") ?? "0"); if (!isNaN(c)) complete.mutate({ id: ev._id, costEur: c }); }}>
+              Complete
             </button>
           )}
         </div>
