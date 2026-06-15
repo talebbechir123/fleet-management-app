@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { vehicleApi } from "../lib/api";
 
-const CV_URL = "https://github.com/talebbechir123/fleet-management-app/public/Bechir_Devops_FullStack_eng.pdf";
+const CV_URL = "https://github.com/talebbechir123/fleet-management-app/frontend/public/Bechir_Devops_FullStack_eng.pdf";
 const PHOTO_URL = "/fleet-management-app/profile.jpg";
 
 export function Home() {
